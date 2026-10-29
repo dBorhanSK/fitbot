@@ -38,6 +38,7 @@ SETUP_KEY = os.getenv("SETUP_KEY", "").strip()
 COACH_USERNAME = os.getenv("COACH_USERNAME", "").strip().lstrip("@")
 KEEPALIVE = os.getenv("KEEPALIVE", "1").lower() not in ("0", "false", "no", "off")
 KEEPALIVE_SECONDS = max(300, int(os.getenv("KEEPALIVE_SECONDS", "480")))
+AUTO_SET_WEBHOOK = os.getenv("AUTO_SET_WEBHOOK", "1").lower() not in ("0", "false", "no", "off")
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 # The opaque path segment complements Telegram's secret header, as in NimaBot.
 HOOK_PATH = hashlib.sha256((BOT_TOKEN + ":" + WEBHOOK_SECRET).encode()).hexdigest()[:40]
@@ -1115,8 +1116,50 @@ def webhook_status():
     return jsonify({"ok": True, "result": result})
 
 
+def init_webhook():
+    """Register the Telegram webhook automatically whenever the app process starts.
+
+    Unlike the manual /set-webhook endpoint, this runs during module startup under
+    Gunicorn too. It does not delete the webhook or drop pending updates first.
+    Keep a single Gunicorn worker so startup doesn't race multiple setWebhook calls.
+    """
+    if not AUTO_SET_WEBHOOK:
+        log.info("Automatic webhook registration disabled by AUTO_SET_WEBHOOK")
+        return
+    if not PUBLIC_BASE_URL:
+        log.error("Cannot auto-register Telegram webhook: PUBLIC_BASE_URL is empty")
+        return
+
+    url = f"{PUBLIC_BASE_URL}/webhook/{HOOK_PATH}"
+    try:
+        result = tg("setWebhook", {
+            "url": url,
+            "secret_token": WEBHOOK_SECRET,
+            "allowed_updates": ["message", "callback_query"],
+            "max_connections": 40,
+            "drop_pending_updates": False,
+        }, timeout=15)
+        if result is True:
+            log.info("Telegram webhook registered automatically for %s", PUBLIC_BASE_URL)
+        else:
+            log.warning("Telegram setWebhook returned an unexpected result: %r", result)
+    except Exception:
+        # Keep the Flask service bootable; Telegram retries webhook updates and
+        # the existing authenticated /set-webhook endpoint remains available.
+        log.exception("Automatic Telegram webhook registration failed")
+
+    try:
+        tg("setMyCommands", {"commands": [
+            {"command": "start", "description": "شروع و منوی اصلی"},
+            {"command": "admin", "description": "پنل مدیریت مربی"},
+            {"command": "customer", "description": "مشاهده شاگرد بر اساس آیدی (مالک)"},
+        ]}, timeout=10)
+    except Exception:
+        log.warning("Could not register bot commands automatically", exc_info=True)
+
+
 def _keepalive_loop():
-    # This is an optional best effort, not a guarantee on Render Free.
+    # Best-effort self-ping only. Render Free can still suspend the service.
     while True:
         time.sleep(KEEPALIVE_SECONDS)
         if not PUBLIC_BASE_URL:
@@ -1128,6 +1171,9 @@ def _keepalive_loop():
             log.debug("Keepalive ping failed", exc_info=True)
 
 
+# Mirror NimaBot's startup behavior: no manual browser link needed after a restart/deploy.
+# With Gunicorn, use one worker; message processing itself already uses UPDATE_WORKERS.
+init_webhook()
 if KEEPALIVE and PUBLIC_BASE_URL:
     threading.Thread(target=_keepalive_loop, name="fitbot-keepalive", daemon=True).start()
 
