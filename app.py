@@ -261,7 +261,7 @@ def create_order_summary(order: dict, customer: dict | None):
 
 # ── Customer-facing screens ────────────────────────────────────────────────
 def main_menu(chat_id: int):
-    send(chat_id, "سلام 👋 به FitBot خوش اومدی!\n\nاز اینجا می‌تونی برنامه بخری، مشخصاتت رو ثبت کنی و برنامه‌های اختصاصی‌ات رو دریافت کنی.", MAIN_KEYBOARD)
+    send(chat_id, "سلام 👋 به Darya FitBot خوش اومدی!\n\nاز اینجا می‌تونی برنامه بخری، مشخصاتت رو ثبت کنی و برنامه‌های اختصاصی‌ات رو دریافت کنی.", MAIN_KEYBOARD)
 
 
 def show_services(chat_id: int, category: str):
