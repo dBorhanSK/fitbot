@@ -565,16 +565,7 @@ def start_order(chat_id, uid, sid):
         "price": int(s["price"]), "status": "collecting_info", "payment_status": "unpaid", "customer_info": {}}))
     if not created:
         screen(chat_id, "ثبت سفارش انجام نشد. دوباره تلاش کن.", [[btn("🔙 منو", "home")]])
-        return
-    customer = get_customer(uid) or {}
-    fields = [k for k in FIXED_KEYS if customer.get(k) in (None, "")] + VARIABLE_KEYS
-    st = {"mode": "order", "order_id": created[0]["id"], "fields": fields, "i": 0, "info": {}}
-    set_state(uid, "form", st)
-    returning = len(fields) == len(VARIABLE_KEYS)
-    note = "اطلاعات ثابتت از قبل ثبت شده؛ فقط چند مورد تغییرپذیر رو می‌پرسم ✨" if returning else "فقط یک‌بار این اطلاعات رو می‌پرسم؛ دفعه بعد سریع‌تره ✨"
-    send(chat_id, card(f"✅ سفارش #{created[0]['id']} ثبت شد", e(s["name"]), f"<i>{note}</i>"))
-    ask_question(chat_id, uid, st)
-
+       
 
 def advance_form(uid, chat_id, st, value, keep=False):
     key = st["fields"][st["i"]]
@@ -586,19 +577,6 @@ def advance_form(uid, chat_id, st, value, keep=False):
         ask_question(chat_id, uid, st)
         return
     finish_form(uid, chat_id, st)
-
-
-def finish_form(uid, chat_id, st):
-    if st["info"]:
-        update_customer(uid, st["info"])
-    customer = get_customer(uid) or {}
-    snapshot = {k: customer.get(k) for k in PROFILE_KEYS}
-    data_of(sb.table("orders").update({"customer_info": snapshot, "status": "awaiting_receipt",
-                                       "payment_status": "unpaid", "updated_at": now_iso()})
-            .eq("id", st["order_id"]).eq("telegram_user_id", uid))
-    clear_state(uid)
-    send(chat_id, "✅ اطلاعاتت ثبت شد. حالا مرحله پرداخت 👇")
-    show_payment(chat_id, uid, st["order_id"])
 
 
 # ── payment & receipt ──
