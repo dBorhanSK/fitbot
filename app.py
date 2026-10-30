@@ -459,7 +459,7 @@ def main_keyboard(uid):
         [btn("🛒 سفارش برنامه جدید", "buy")],
         [btn("📦 سفارش‌ها و پرداخت", "my:orders"), btn("📚 برنامه‌های من", "my:programs")],
         [btn("👤 پروفایل من", "my:profile"), btn("🏆 سوابق و نظرات", "hist")],
-        [btn("💬  مشاوره و پشتیبانی", "support"), btn("📩 پیشنهاد و انتقاد", "feedback")],
+        [btn("💬 مشاوره و پشتیبانی", "support"), btn("📩 پیشنهاد و انتقاد", "feedback")],
     ]
     if is_owner(uid):
         kb.append([btn(ADMIN_BTN, "a:menu")])
@@ -467,7 +467,7 @@ def main_keyboard(uid):
 
 
 def main_menu(chat_id, uid, name="", fresh=False):
-    text = card("🌟 Darya FitBot.  |    .📝برنامه اختصاصی تمرین و تغذیه",
+    text = card("🌟 Darya FitBot | 📝 برنامه اختصاصی تمرین و تغذیه",
                 f"سلام {e(name) or 'دوست عزیز'} 👋",
                 "از همین‌جا می‌تونی برنامه سفارش بدی، پرداخت کنی و برنامه‌ات رو دریافت کنی.",
                 "<i>همه‌چیز با چند کلیک ساده 👇</i>")
@@ -565,7 +565,13 @@ def start_order(chat_id, uid, sid):
         "price": int(s["price"]), "status": "collecting_info", "payment_status": "unpaid", "customer_info": {}}))
     if not created:
         screen(chat_id, "ثبت سفارش انجام نشد. دوباره تلاش کن.", [[btn("🔙 منو", "home")]])
-       
+        return
+    customer = get_customer(uid) or {}
+    fields = [k for k in FIXED_KEYS if customer.get(k) in (None, "")] + VARIABLE_KEYS
+    st = {"mode": "order", "order_id": created[0]["id"], "fields": fields, "i": 0, "info": {}}
+    set_state(uid, "form", st)
+    ask_question(chat_id, uid, st)
+
 
 def advance_form(uid, chat_id, st, value, keep=False):
     key = st["fields"][st["i"]]
@@ -577,6 +583,18 @@ def advance_form(uid, chat_id, st, value, keep=False):
         ask_question(chat_id, uid, st)
         return
     finish_form(uid, chat_id, st)
+
+
+def finish_form(uid, chat_id, st):
+    if st["info"]:
+        update_customer(uid, st["info"])
+    customer = get_customer(uid) or {}
+    snapshot = {k: customer.get(k) for k in PROFILE_KEYS}
+    data_of(sb.table("orders").update({"customer_info": snapshot, "status": "awaiting_receipt",
+                                       "payment_status": "unpaid", "updated_at": now_iso()})
+            .eq("id", st["order_id"]).eq("telegram_user_id", uid))
+    clear_state(uid)
+    show_payment(chat_id, uid, st["order_id"])
 
 
 # ── payment & receipt ──
