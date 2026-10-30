@@ -467,7 +467,7 @@ def main_keyboard(uid):
 
 
 def main_menu(chat_id, uid, name="", fresh=False):
-    text = card("🌟 Darya FitBot | برنامه اختصاصی تمرین و تغذیه",
+    text = card("🌟 Darya FitBot | 📝برنامه اختصاصی تمرین و تغذیه",
                 f"سلام {e(name) or 'دوست عزیز'} 👋",
                 "از همین‌جا می‌تونی برنامه سفارش بدی، پرداخت کنی و برنامه‌ات رو دریافت کنی.",
                 "<i>همه‌چیز با چند کلیک ساده 👇</i>")
