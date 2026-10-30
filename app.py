@@ -459,7 +459,7 @@ def main_keyboard(uid):
         [btn("🛒 سفارش برنامه جدید", "buy")],
         [btn("📦 سفارش‌ها و پرداخت", "my:orders"), btn("📚 برنامه‌های من", "my:programs")],
         [btn("👤 پروفایل من", "my:profile"), btn("🏆 سوابق و نظرات", "hist")],
-        [btn("💬 و مشاوره پشتیبانی", "support"), btn("📩 پیشنهاد و انتقاد", "feedback")],
+        [btn("💬  مشاوره و پشتیبانی", "support"), btn("📩 پیشنهاد و انتقاد", "feedback")],
     ]
     if is_owner(uid):
         kb.append([btn(ADMIN_BTN, "a:menu")])
